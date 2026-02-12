@@ -449,10 +449,10 @@ impl ::re_types_core::AsComponents for GaussianSplats3D {
 
 impl ::re_types_core::ArchetypeReflectionMarker for GaussianSplats3D {}
 
-impl crate::VisualizableArchetype for Points3D {
+impl crate::VisualizableArchetype for GaussianSplats3D {
     #[inline]
     fn visualizer(&self) -> crate::Visualizer {
-        crate::Visualizer::new("Points3D").with_overrides(self)
+        crate::Visualizer::new("GaussianSplats3D").with_overrides(self)
     }
 }
 
