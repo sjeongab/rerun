@@ -117,7 +117,6 @@ impl VisualizerSystem for GaussianSplats3DVisualizer {
         view_query: &ViewQuery<'_>,
         context_systems: &ViewContextCollection,
     ) -> Result<VisualizerExecutionOutput, ViewSystemExecutionError> {
-        re_log::info!("GaussianSplats3DVisualizer created!");
         let preferred_view_kind = self.0.preferred_view_kind;
         let output = VisualizerExecutionOutput::default();
         let mut builder = ProcMeshDrawableBuilder::new(
