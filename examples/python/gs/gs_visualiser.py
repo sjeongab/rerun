@@ -3,9 +3,14 @@ from plyfile import PlyData
 import sys
 import os
 import rerun as rr
+from pathlib import Path
 
 # --- CONFIGURATION ---
-SPLAT_FILE = "point_cloud.ply"  # Change this to your file path
+script_dir = Path(__file__).parent.resolve()
+
+# 2. Create the full path to the ply file
+ply_file_path = script_dir / "point_cloud.ply"
+
 CAMERA_POSITION = np.array([0.0, 0.0, -5.0])
 # ---------------------
 
@@ -15,9 +20,9 @@ def sigmoid(x):
 def load_splats():
     rr.init("gaussian_splat_viewer", spawn=True)
 
-    print(f"Loading {SPLAT_FILE}...")
+    print(f"Loading {ply_file_path}...")
     try:
-        plydata = PlyData.read(SPLAT_FILE)
+        plydata = PlyData.read(str(ply_file_path))
     except Exception as e:
         print(f"Error reading file: {e}")
         return
@@ -80,4 +85,15 @@ def load_splats():
     )
 
 if __name__ == "__main__":
+
+    print(f"RERUN FILE: {rr.__file__}")
+    print(f"RERUN VERSION: {rr.__version__}")
+
+    # Check if the class exists in the loaded module
+    if hasattr(rr, 'GaussianSplats3D'):
+        print("SUCCESS: GaussianSplats3D found!")
+    else:
+        print("FAILURE: GaussianSplats3D NOT found in this version.")
+        # Print what IS available to help debug
+        print("Available attributes:", [x for x in dir(rr) if '3D' in x])
     load_splats()
