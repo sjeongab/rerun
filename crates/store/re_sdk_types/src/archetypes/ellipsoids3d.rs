@@ -433,6 +433,7 @@ impl Ellipsoids3D {
     pub(crate) fn new(
         half_sizes: impl IntoIterator<Item = impl Into<crate::components::HalfSize3D>>,
     ) -> Self {
+        re_log::info!("Ellipsoid created!");
         Self {
             half_sizes: try_serialize_field(Self::descriptor_half_sizes(), half_sizes),
             centers: None,

@@ -2,67 +2,73 @@ namespace rerun.archetypes;
 
 // ---
 
-/// A 3D point cloud with positions and optional colors, radii, labels, etc.
+/// 3D ellipsoids or spheres.
 ///
-/// If there are multiple instance poses, the entire point cloud will be repeated for each of the poses.
+/// This archetype is for ellipsoids or spheres whose size is a key part of the data
+/// (e.g. a bounding sphere).
+/// For points whose radii are for the sake of visualization, use [archetypes.Points3D] instead.
 ///
-/// \example archetypes/points3d_simple title="Simple 3D points" image="https://static.rerun.io/point3d_simple/32fb3e9b65bea8bd7ffff95ad839f2f8a157a933/1200w.png"
-/// \example archetypes/points3d_random !api title="Randomly distributed 3D points with varying color and radius" image="https://static.rerun.io/point3d_random/7e94e1806d2c381943748abbb3bedb68d564de24/1200w.png"
-/// \example archetypes/points3d_ui_radius !api title="Log points with radii given in UI points" image="https://static.rerun.io/point3d_ui_radius/e051a65b4317438bcaea8d0eee016ac9460b5336/1200w.png"
-/// \example archetypes/points3d_row_updates title="Update a point cloud over time" image="https://static.rerun.io/points3d_row_updates/fba056871b1ec3fc6978ab605d9a63e44ef1f6de/1200w.png"
-/// \example archetypes/points3d_column_updates title="Update a point cloud over time, in a single operation" image="https://static.rerun.io/points3d_row_updates/fba056871b1ec3fc6978ab605d9a63e44ef1f6de/1200w.png"
-/// \example archetypes/points3d_partial_updates title="Update specific properties of a point cloud over time" image="https://static.rerun.io/points3d_partial_updates/d8bec9c3388d2bd0fe59dff01ab8cde0bdda135e/1200w.png"
+/// If there's more instance poses than half sizes, the last ellipsoid/sphere's orientation will be repeated for the remaining poses.
+/// Orienting and placing ellipsoids/spheres forms a separate transform that is applied prior to [archetypes.InstancePoses3D] and [archetypes.Transform3D].
+///
+/// \example archetypes/ellipsoids3d_simple title="Covariance ellipsoid" image="https://static.rerun.io/elliopsoid3d_simple/bd5d46e61b80ae44792b52ee07d750a7137002ea/1200w.png"
 table GaussianSplats3D (
+  "attr.cpp.no_field_ctors",
   "attr.docs.category": "Spatial 3D",
   "attr.docs.view_types": "Spatial3DView, Spatial2DView: if logged above active projection",
   "attr.rerun.state": "stable",
   "attr.rerun.visualizer": "GaussianSplats3D",
-  "attr.rust.derive": "PartialEq"
+  "attr.rust.derive": "PartialEq",
+  "attr.rust.new_pub_crate"
 ) {
   // --- Required ---
 
-  /// All the 3D positions at which the point cloud shows points.
-  positions: [rerun.components.Position3D] ("attr.rerun.component_required", order: 1000);
+  /// For each ellipsoid, half of its size on its three axes.
+  ///
+  /// If all components are equal, then it is a sphere with that radius.
+  half_sizes: [rerun.components.HalfSize3D] ("attr.rerun.component_required", order: 1000);
 
   // --- Recommended ---
 
-  /// Optional radii for the points, effectively turning them into circles.
-  /// radii: [rerun.components.Radius] ("attr.rerun.component_recommended", nullable, order: 2000);
-
-  half_sizes: [rerun.components.HalfSizes3D] ("attr.rerun.component_recommended", order: 2000);
-
-  /// Optional colors for the points.
+  /// Optional center positions of the ellipsoids.
   ///
-  /// \py The colors are interpreted as RGB or RGBA in sRGB gamma-space,
-  /// \py As either 0-1 floats or 0-255 integers, with separate alpha.
-  colors: [rerun.components.Color] ("attr.rerun.component_recommended", nullable, order: 2400);
+  /// If not specified, the centers will be at (0, 0, 0).
+  centers: [rerun.components.Translation3D] ("attr.rerun.component_recommended", nullable, order: 2000);
+
+  /// Rotations via axis + angle.
+  ///
+  /// If no rotation is specified, the axes of the ellipsoid align with the axes of the local coordinate system.
+  rotation_axis_angles: [rerun.components.RotationAxisAngle] ("attr.rerun.component_optional", nullable, order: 2100);
+
+  /// Rotations via quaternion.
+  ///
+  /// If no rotation is specified, the axes of the ellipsoid align with the axes of the local coordinate system.
+  quaternions: [rerun.components.RotationQuat] ("attr.rerun.component_optional", nullable, order: 2200);
+
+  /// Optional colors for the ellipsoids.
+  ///
+  /// Alpha channel is used for transparency for solid fill-mode.
+  colors: [rerun.components.Color] ("attr.rerun.component_recommended", nullable, order: 2300);
 
   // --- Optional ---
 
-  /// Optional text labels for the points.
-  ///
-  /// If there's a single label present, it will be placed at the center of the entity.
-  /// Otherwise, each instance will have its own label.
-  labels: [rerun.components.Text] ("attr.rerun.component_optional", nullable, order: 3000);
+  /// Optional radii for the lines used when the ellipsoid is rendered as a wireframe.
+  line_radii: [rerun.components.Radius] ("attr.rerun.component_optional", nullable, order: 3000);
+
+  /// Optionally choose whether the ellipsoids are drawn with lines or solid.
+  fill_mode: rerun.components.FillMode ("attr.rerun.component_optional", nullable, order: 3100);
+
+  /// Optional text labels for the ellipsoids.
+  labels: [rerun.components.Text] ("attr.rerun.component_optional", nullable, order: 3200);
 
   /// Whether the text labels should be shown.
   ///
   /// If not set, labels will automatically appear when there is exactly one label for this entity
   /// or the number of instances on this entity is under a certain threshold.
-  show_labels: rerun.components.ShowLabels ("attr.rerun.component_optional", nullable, order: 3100);
+  show_labels: rerun.components.ShowLabels ("attr.rerun.component_optional", nullable, order: 3250);
 
-  /// Optional class Ids for the points.
+  /// Optional class ID for the ellipsoids.
   ///
-  /// The [components.ClassId] provides colors and labels if not specified explicitly.
-  class_ids: [rerun.components.ClassId] ("attr.rerun.component_optional", nullable, order: 3200);
-
-  /// Optional keypoint IDs for the points, identifying them within a class.
-  ///
-  /// If keypoint IDs are passed in but no [components.ClassId]s were specified, the [components.ClassId] will
-  /// default to 0.
-  /// This is useful to identify points within a single classification (which is identified
-  /// with `class_id`).
-  /// E.g. the classification might be 'Person' and the keypoints refer to joints on a
-  /// detected skeleton.
-  keypoint_ids: [rerun.components.KeypointId] ("attr.rerun.component_optional", nullable, order: 3300);
+  /// The class ID provides colors and labels if not specified explicitly.
+  class_ids: [rerun.components.ClassId] ("attr.rerun.component_optional", nullable, order: 3300);
 }

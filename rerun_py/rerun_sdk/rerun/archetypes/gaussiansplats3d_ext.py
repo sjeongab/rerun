@@ -2,73 +2,91 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ..error_utils import catch_and_log_exceptions
+import numpy as np
+
+from ..error_utils import _send_warning_or_raise, catch_and_log_exceptions
 
 if TYPE_CHECKING:
-    from .. import datatypes
+    from .. import components, datatypes
 
 
 class GaussianSplats3DExt:
-    """Extension for [Points3D][rerun.archetypes.Points3D]."""
+    """Extension for [Ellipsoids3D][rerun.archetypes.Ellipsoids3D]."""
 
     def __init__(
         self: Any,
-        positions: datatypes.Vec3DArrayLike,
         *,
-        #radii: datatypes.Float32ArrayLike | None = None,
         half_sizes: datatypes.Vec3DArrayLike | None = None,
+        radii: datatypes.Float32ArrayLike | None = None,
+        centers: datatypes.Vec3DArrayLike | None = None,
+        rotation_axis_angles: datatypes.RotationAxisAngleArrayLike | None = None,
+        quaternions: datatypes.QuaternionArrayLike | None = None,
         colors: datatypes.Rgba32ArrayLike | None = None,
+        line_radii: datatypes.Float32ArrayLike | None = None,
+        fill_mode: components.FillModeLike | None = None,
         labels: datatypes.Utf8ArrayLike | None = None,
         show_labels: datatypes.BoolLike | None = None,
         class_ids: datatypes.ClassIdArrayLike | None = None,
-        keypoint_ids: datatypes.KeypointIdArrayLike | None = None,
     ) -> None:
         """
-        Create a new instance of the Points3D archetype.
+        Create a new instance of the Ellipsoids3D archetype.
 
         Parameters
         ----------
-        positions:
-             All the 3D positions at which the point cloud shows points.
+        half_sizes:
+            All half-extents that make up the batch of ellipsoids.
+            Specify this instead of `radii`
         radii:
-             Optional radii for the points, effectively turning them into circles.
-        colors:
-             Optional colors for the points.
+            All radii that make up this batch of spheres.
+            Specify this instead of `half_sizes`
+        centers:
+            Optional center positions of the ellipsoids.
+        rotation_axis_angles:
+            Rotations via axis + angle.
 
-             The colors are interpreted as RGB or RGBA in sRGB gamma-space,
-             As either 0-1 floats or 0-255 integers, with separate alpha.
+            If no rotation is specified, the axes of the boxes align with the axes of the local coordinate system.
+        quaternions:
+            Rotations via quaternion.
+
+            If no rotation is specified, the axes of the boxes align with the axes of the local coordinate system.
+        colors:
+            Optional colors for the ellipsoids.
+        line_radii:
+            Optional radii for the lines that make up the ellipsoids.
+        fill_mode:
+            Optionally choose whether the ellipsoids are drawn with lines or solid.
         labels:
-             Optional text labels for the points.
+            Optional text labels for the ellipsoids.
         show_labels:
             Optional choice of whether the text labels should be shown by default.
         class_ids:
-             Optional class Ids for the points.
+            Optional `ClassId`s for the ellipsoids.
 
-             The class ID provides colors and labels if not specified explicitly.
-        keypoint_ids:
-             Optional keypoint IDs for the points, identifying them within a class.
-
-             If keypoint IDs are passed in but no class IDs were specified, the class ID will
-             default to 0.
-             This is useful to identify points within a single classification (which is identified
-             with `class_id`).
-             E.g. the classification might be 'Person' and the keypoints refer to joints on a
-             detected skeleton.
+            The class ID provides colors and labels if not specified explicitly.
 
         """
+
         with catch_and_log_exceptions(context=self.__class__.__name__):
-            if class_ids is None and keypoint_ids is not None:
-                class_ids = 0
+            if radii is not None:
+                if half_sizes is not None:
+                    _send_warning_or_raise("Cannot specify both `radii` and `half_sizes` at the same time.", 1)
+
+                radii = np.asarray(radii, dtype=np.float32)
+                # Duplicate [r1, r2, ...] to [[r1, r1, r1], [r2, r2, r2], ...]
+                half_sizes = np.repeat(np.expand_dims(radii, axis=1), 3, axis=1)
 
             self.__attrs_init__(
-                positions=positions,
-                #radii=radii,
-                half_sizes = half_sizes,
+                half_sizes=half_sizes,
+                centers=centers,
+                rotation_axis_angles=rotation_axis_angles,
+                quaternions=quaternions,
                 colors=colors,
+                line_radii=line_radii,
+                fill_mode=fill_mode,
                 labels=labels,
                 show_labels=show_labels,
                 class_ids=class_ids,
-                keypoint_ids=keypoint_ids,
             )
             return
+
         self.__attrs_clear__()

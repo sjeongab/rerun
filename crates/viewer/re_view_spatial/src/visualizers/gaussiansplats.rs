@@ -117,14 +117,14 @@ impl VisualizerSystem for GaussianSplats3DVisualizer {
         view_query: &ViewQuery<'_>,
         context_systems: &ViewContextCollection,
     ) -> Result<VisualizerExecutionOutput, ViewSystemExecutionError> {
-        re_log::info!("GaussianSplats3DVisualizer at 3drs created!");
+        re_log::info!("GaussianSplats3DVisualizer created!");
         let preferred_view_kind = self.0.preferred_view_kind;
         let output = VisualizerExecutionOutput::default();
         let mut builder = ProcMeshDrawableBuilder::new(
             &mut self.0,
             ctx.viewer_ctx.render_ctx(),
             view_query,
-            "ellipsoids",
+            "gaussiansplats",
         );
 
         use super::entity_iterator::process_archetype;

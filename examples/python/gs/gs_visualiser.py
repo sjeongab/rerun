@@ -75,7 +75,8 @@ def load_splats():
     print("Logging to Rerun...")
 
     # Log as actual Gaussian Splats
-    mode = "points"
+    mode = "splats"
+    print("mode: ", mode)
     match mode.lower():
         case "points":
             rr.log(
@@ -90,9 +91,11 @@ def load_splats():
             rr.log(
                 "splats",
                 rr.GaussianSplats3D(
-                    sorted_pos,
-                    colors=rgba_colors,
+                    centers=positions,
                     half_sizes=scales,
+                    quaternions=quats,
+                    colors=rgba_colors,
+                    fill_mode="solid"
                 )
             )
         case "ellipsoids":
@@ -101,7 +104,7 @@ def load_splats():
                 rr.Ellipsoids3D(
                     centers=positions,
                     half_sizes=scales,
-                    #quaternions=quats,
+                    quaternions=quats,
                     colors=rgba_colors,
                     fill_mode="solid"
                 )
