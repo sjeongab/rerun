@@ -15,7 +15,8 @@ class GaussianSplats3DExt:
         self: Any,
         positions: datatypes.Vec3DArrayLike,
         *,
-        radii: datatypes.Float32ArrayLike | None = None,
+        #radii: datatypes.Float32ArrayLike | None = None,
+        half_sizes: datatypes.Vec3DArrayLike | None = None,
         colors: datatypes.Rgba32ArrayLike | None = None,
         labels: datatypes.Utf8ArrayLike | None = None,
         show_labels: datatypes.BoolLike | None = None,
@@ -61,7 +62,8 @@ class GaussianSplats3DExt:
 
             self.__attrs_init__(
                 positions=positions,
-                radii=radii,
+                #radii=radii,
+                half_sizes = half_sizes,
                 colors=colors,
                 labels=labels,
                 show_labels=show_labels,

@@ -19,7 +19,7 @@ from .._baseclasses import (
 from ..blueprint import VisualizableArchetype, Visualizer
 from ..error_utils import catch_and_log_exceptions
 from .points3d_ext import Points3DExt
-#from .gaussiansplats3d_ext import GaussianSplats3DExt
+from .gaussiansplats3d_ext import GaussianSplats3DExt
 
 if TYPE_CHECKING:
     from ..blueprint.datatypes import VisualizerComponentMappingLike
@@ -28,7 +28,7 @@ __all__ = ["GaussianSplats3D"]
 
 
 @define(str=False, repr=False, init=False)
-class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
+class GaussianSplats3D(GaussianSplats3DExt, Archetype, VisualizableArchetype):
     """
     **Archetype**: A 3D point cloud with positions and optional colors, radii, labels, etc.
     """
@@ -39,7 +39,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
         """Convenience method for calling `__attrs_init__` with all `None`s."""
         self.__attrs_init__(
             positions=None,
-            radii=None,
+            #radii=None,
+            half_sizes=None,
             colors=None,
             labels=None,
             show_labels=None,
@@ -60,7 +61,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
         *,
         clear_unset: bool = False,
         positions: datatypes.Vec3DArrayLike | None = None,
-        radii: datatypes.Float32ArrayLike | None = None,
+        #radii: datatypes.Float32ArrayLike | None = None,
+        half_sizes: datatypes.Vec3DArrayLike | None = None,
         colors: datatypes.Rgba32ArrayLike | None = None,
         labels: datatypes.Utf8ArrayLike | None = None,
         show_labels: datatypes.BoolLike | None = None,
@@ -113,7 +115,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
         with catch_and_log_exceptions(context=cls.__name__):
             kwargs = {
                 "positions": positions,
-                "radii": radii,
+                #"radii": radii,
+                "half_sizes": half_sizes,
                 "colors": colors,
                 "labels": labels,
                 "show_labels": show_labels,
@@ -140,7 +143,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
         cls,
         *,
         positions: datatypes.Vec3DArrayLike | None = None,
-        radii: datatypes.Float32ArrayLike | None = None,
+        #radii: datatypes.Float32ArrayLike | None = None,
+        half_sizes: datatypes.Vec3DArrayLike | None = None,
         colors: datatypes.Rgba32ArrayLike | None = None,
         labels: datatypes.Utf8ArrayLike | None = None,
         show_labels: datatypes.BoolArrayLike | None = None,
@@ -196,7 +200,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
         with catch_and_log_exceptions(context=cls.__name__):
             inst.__attrs_init__(
                 positions=positions,
-                radii=radii,
+                #radii=radii,
+                half_sizes=half_sizes,
                 colors=colors,
                 labels=labels,
                 show_labels=show_labels,
@@ -210,7 +215,8 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
 
         kwargs = {
             "GaussianSplats3D:positions": positions,
-            "GaussianSplats3D:radii": radii,
+            #"GaussianSplats3D:radii": radii,
+            "GaussianSplat3D:half_sizes": half_sizes,
             "GaussianSplats3D:colors": colors,
             "GaussianSplats3D:labels": labels,
             "GaussianSplats3D:show_labels": show_labels,
@@ -255,14 +261,21 @@ class GaussianSplats3D(Points3DExt, Archetype, VisualizableArchetype):
     #
     # (Docstring intentionally commented out to hide this field from the docs)
 
-    radii: components.RadiusBatch | None = field(
+    """radii: components.RadiusBatch | None = field(
         metadata={"component": True},
         default=None,
         converter=components.RadiusBatch._converter,  # type: ignore[misc]
-    )
+    )"""
+    
     # Optional radii for the points, effectively turning them into circles.
     #
     # (Docstring intentionally commented out to hide this field from the docs)
+
+    half_sizes: components.HalfSize3DBatch | None = field(
+        metadata={"component": True},
+        default=None,
+        converter=components.HalfSize3DBatch._converter,  # type: ignore[misc]
+    )
 
     colors: components.ColorBatch | None = field(
         metadata={"component": True},

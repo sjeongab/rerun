@@ -75,14 +75,37 @@ def load_splats():
     print("Logging to Rerun...")
 
     # Log as actual Gaussian Splats
-    rr.log(
-        "splats",
-        rr.GaussianSplats3D(
-            sorted_pos,
-            colors=rgba_colors,
-            radii=sorted_radii,
-        )
-    )
+    mode = "points"
+    match mode.lower():
+        case "points":
+            rr.log(
+                "points",
+                rr.Points3D(
+                    sorted_pos,
+                    colors=rgba_colors,
+                    radii=sorted_radii,
+                )
+            )
+        case "splats":
+            rr.log(
+                "splats",
+                rr.GaussianSplats3D(
+                    sorted_pos,
+                    colors=rgba_colors,
+                    half_sizes=scales,
+                )
+            )
+        case "ellipsoids":
+            rr.log(
+                "ellipsoids",
+                rr.Ellipsoids3D(
+                    centers=positions,
+                    half_sizes=scales,
+                    #quaternions=quats,
+                    colors=rgba_colors,
+                    fill_mode="solid"
+                )
+            )
 
 if __name__ == "__main__":
 
