@@ -35,9 +35,10 @@ var<uniform> draw_data: DrawDataUniformBuffer;
 
 struct BatchUniformBuffer {
     world_from_obj: mat4x4f,
-    flags: u32,
     depth_offset: f32,
-    _padding: vec2u,
+    _pad1: u32,
+    _pad2: u32,
+    _pad3: u32,
     outline_mask: vec2u,
     picking_layer_object_id: vec2u,
 };
@@ -198,11 +199,13 @@ fn vs_main(@builtin(vertex_index) vertex_idx: u32) -> VertexOut {
     let RS = mat3x3f(R[0] * scale.x, R[1] * scale.y, R[2] * scale.z);
     let M  = W_view * W_obj * RS;
 
-    // ---- Jacobian of perspective projection (2×3, stored as mat3x2f) ----
+    // Jacobian of perspective projection (2×3).
+    // Column 2 sign accounts for Rerun's -Z forward convention:
+    //   u = focal_x * x / (-z_view)  →  du/dz_view = +focal_x * x / tz²
     let J = mat3x2f(
         vec2f(focal.x / tz, 0.0),
         vec2f(0.0, focal.y / tz),
-        vec2f(-focal.x * tx / (tz * tz), -focal.y * ty / (tz * tz)),
+        vec2f(focal.x * tx / (tz * tz), focal.y * ty / (tz * tz)),
     );
 
     // ---- Project to 2D covariance: Σ_2d = T · Tᵀ  where T = J · M ----
@@ -272,6 +275,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
     if alpha < 1.0 / 255.0 { discard; }
 
     return vec4f(in.color.rgb, alpha);
+
 }
 
 @fragment
