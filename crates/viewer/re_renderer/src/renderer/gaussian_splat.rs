@@ -724,27 +724,13 @@ impl Renderer for GaussianSplatRenderer {
         pass: &mut wgpu::RenderPass<'_>,
         draw_instructions: &[DrawInstruction<'_, Self::RendererDrawData>],
     ) -> Result<(), DrawError> {
-        re_log::info_once!(
-        "GaussianSplatRenderer::draw called for phase {:?}, {} instructions",
-        phase,
-        draw_instructions.len()
-        );
         let pipeline_handle = match phase {
             DrawPhase::OutlineMask => self.render_pipeline_outline_mask,
             DrawPhase::Opaque | DrawPhase::Transparent => self.render_pipeline_color,
             DrawPhase::PickingLayer => self.render_pipeline_picking_layer,
             _ => unreachable!("Called on a phase we didn't subscribe to: {phase:?}"),
         };
-        let pipeline = match render_pipelines.get(pipeline_handle) {
-            Ok(p) => {
-                re_log::info_once!("Got pipeline for {:?}", phase);
-                p
-            }
-            Err(e) => {
-                re_log::error!("FAILED to get pipeline for {:?}: {:?}", phase, e);
-                return Err(e.into());
-            }
-        };
+        let pipeline = render_pipelines.get(pipeline_handle)?;
 
         pass.set_pipeline(pipeline);
 
@@ -769,11 +755,6 @@ impl Renderer for GaussianSplatRenderer {
 
             for drawable in *drawables {
                 let batch = &draw_data.batches[drawable.draw_data_payload as usize];
-                re_log::info_once!(
-                    "Drawing splat batch {:?} vertex_range {:?}",
-                    phase,
-                    batch.vertex_range
-                );
                 pass.set_bind_group(2, &batch.bind_group, &[]);
                 pass.draw(batch.vertex_range.clone(), 0..1);
             }
