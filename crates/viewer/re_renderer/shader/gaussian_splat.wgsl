@@ -153,14 +153,16 @@ fn vs_main(@builtin(vertex_index) vertex_idx: u32) -> VertexOut {
     let view_pos  = frame.view_from_world * vec4f(world_pos, 1.0);   // vec3f
 
     // Cull splats behind or too close to the camera.
-    if view_pos.z < 0.01 {
+    // Rerun uses -Z forward: visible objects have view_pos.z < 0.
+    if view_pos.z > -0.01 {
         out.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return out;
     }
 
-    let tz = view_pos.z;
+    // Positive depth for perspective math.
+    let tz = -view_pos.z;
 
-    // Clamp lateral view-space coordinates for numerical stability at screen edges.
+    // Clamp lateral view-space coordinates for numerical stability.
     let lim_x = 1.3 * frame.tan_half_fov.x * tz;
     let lim_y = 1.3 * frame.tan_half_fov.y * tz;
     let tx = clamp(view_pos.x, -lim_x, lim_x);

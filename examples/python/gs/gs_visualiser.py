@@ -51,7 +51,7 @@ def load_splats():
 
     print("Logging to Rerun...")
 
-    mode = "ellipsoids"
+    mode = "splats"
     print(f"mode: {mode}")
 
     match mode.lower():
