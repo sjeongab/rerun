@@ -1,74 +1,92 @@
+include "rerun/attributes.fbs";
+
 namespace rerun.archetypes;
 
 // ---
 
-/// 3D ellipsoids or spheres.
+/// \example archetypes/gaussian_splats3d_simple title="Simple Gaussian splats" image="https://static.rerun.io/gaussian_splats3d_simple/placeholder.png"
+
+/// A batch of 3D Gaussian splats.
 ///
-/// This archetype is for ellipsoids or spheres whose size is a key part of the data
-/// (e.g. a bounding sphere).
-/// For points whose radii are for the sake of visualization, use [archetypes.Points3D] instead.
+/// Each splat is an anisotropic 3D Gaussian defined by a center position, three
+/// per-axis scale values (standard deviations), a rotation quaternion, a base
+/// opacity, and a color.
 ///
-/// If there's more instance poses than half sizes, the last ellipsoid/sphere's orientation will be repeated for the remaining poses.
-/// Orienting and placing ellipsoids/spheres forms a separate transform that is applied prior to [archetypes.InstancePoses3D] and [archetypes.Transform3D].
+/// At render time the 3D covariance matrix is reconstructed as
+/// `Σ = R · diag(s²) · Rᵀ`, projected into screen space via the EWA splatting
+/// formulation, and drawn as an alpha-blended quad whose transparency follows the
+/// resulting 2D Gaussian distribution.
 ///
-/// \example archetypes/ellipsoids3d_simple title="Covariance ellipsoid" image="https://static.rerun.io/elliopsoid3d_simple/bd5d46e61b80ae44792b52ee07d750a7137002ea/1200w.png"
+/// If your source data stores scales in log-space (common in 3DGS training),
+/// apply `exp()` before logging.  If opacity is stored in logit-space, apply
+/// `sigmoid()` before logging.
 table GaussianSplats3D (
-  "attr.cpp.no_field_ctors",
-  "attr.docs.category": "Spatial 3D",
-  "attr.docs.view_types": "Spatial3DView, Spatial2DView: if logged above active projection",
-  "attr.rerun.state": "stable",
-  "attr.rerun.visualizer": "GaussianSplats3D",
-  "attr.rust.derive": "PartialEq",
-  "attr.rust.new_pub_crate"
+    "attr.docs.category": "Spatial 3D",
+    "attr.docs.view_types": "Spatial3DView",
+    "attr.rust.derive": "PartialEq",
+    "attr.rerun.visualizer": "GaussianSplats3D",
+    "attr.rust.new_pub_crate",
+    order: 300
 ) {
-  // --- Required ---
+    // --- Required ---
 
-  /// For each ellipsoid, half of its size on its three axes.
-  ///
-  /// If all components are equal, then it is a sphere with that radius.
-  half_sizes: [rerun.components.HalfSize3D] ("attr.rerun.component_required", order: 1000);
+    /// Per-splat 3D center position in object (local) space.
+    centers: [rerun.components.Translation3D] (
+        "attr.rerun.component_required",
+        order: 1000
+    );
 
-  // --- Recommended ---
+    /// Per-splat anisotropic scale (standard deviation) along each of the three
+    /// local axes, in **linear space**.
+    ///
+    /// These correspond directly to the diagonal of the scale matrix
+    /// `S = diag(sx, sy, sz)` used when reconstructing the 3D covariance:
+    /// `Σ = R · S² · Rᵀ`.
+    ///
+    /// If your training framework outputs log-scales, apply `exp()` before logging.
+    scales: [rerun.components.HalfSize3D] (
+        "attr.rerun.component_required",
+        order: 1100
+    );
 
-  /// Optional center positions of the ellipsoids.
-  ///
-  /// If not specified, the centers will be at (0, 0, 0).
-  centers: [rerun.components.Translation3D] ("attr.rerun.component_recommended", nullable, order: 2000);
+    // --- Recommended ---
 
-  /// Rotations via axis + angle.
-  ///
-  /// If no rotation is specified, the axes of the ellipsoid align with the axes of the local coordinate system.
-  rotation_axis_angles: [rerun.components.RotationAxisAngle] ("attr.rerun.component_optional", nullable, order: 2100);
+    /// Per-splat rotation as a unit quaternion in `(x, y, z, w)` convention.
+    ///
+    /// Defines the orientation of the splat's local frame relative to the object
+    /// frame.  If omitted, all splats are axis-aligned (identity rotation).
+    quaternions: [rerun.components.RotationQuat] (
+        "attr.rerun.component_recommended",
+        nullable,
+        order: 2000
+    );
 
-  /// Rotations via quaternion.
-  ///
-  /// If no rotation is specified, the axes of the ellipsoid align with the axes of the local coordinate system.
-  quaternions: [rerun.components.RotationQuat] ("attr.rerun.component_optional", nullable, order: 2200);
+    /// Per-splat base opacity in the range [0, 1].
+    ///
+    /// This is the peak alpha at the Gaussian center before the spatial falloff is
+    /// applied.  It represents a learned physical property of the splat and is
+    /// independent of the color alpha channel.
+    ///
+    /// If your source data stores opacity in logit-space (as is common during
+    /// 3DGS training), apply `sigmoid()` before logging.
+    ///
+    /// Defaults to `1.0` if not specified.
+    opacities: [rerun.components.Opacity] (
+        "attr.rerun.component_recommended",
+        nullable,
+        order: 2100
+    );
 
-  /// Optional colors for the ellipsoids.
-  ///
-  /// Alpha channel is used for transparency for solid fill-mode.
-  colors: [rerun.components.Color] ("attr.rerun.component_recommended", nullable, order: 2300);
-
-  // --- Optional ---
-
-  /// Optional radii for the lines used when the ellipsoid is rendered as a wireframe.
-  line_radii: [rerun.components.Radius] ("attr.rerun.component_optional", nullable, order: 3000);
-
-  /// Optionally choose whether the ellipsoids are drawn with lines or solid.
-  fill_mode: rerun.components.FillMode ("attr.rerun.component_optional", nullable, order: 3100);
-
-  /// Optional text labels for the ellipsoids.
-  labels: [rerun.components.Text] ("attr.rerun.component_optional", nullable, order: 3200);
-
-  /// Whether the text labels should be shown.
-  ///
-  /// If not set, labels will automatically appear when there is exactly one label for this entity
-  /// or the number of instances on this entity is under a certain threshold.
-  show_labels: rerun.components.ShowLabels ("attr.rerun.component_optional", nullable, order: 3250);
-
-  /// Optional class ID for the ellipsoids.
-  ///
-  /// The class ID provides colors and labels if not specified explicitly.
-  class_ids: [rerun.components.ClassId] ("attr.rerun.component_optional", nullable, order: 3300);
+    /// Per-splat color in linear RGBA.
+    ///
+    /// The RGB channels define the base color of the Gaussian.  The alpha channel,
+    /// if present, acts as an additional visualization-level transparency multiplier
+    /// applied on top of `opacities`.
+    ///
+    /// Defaults to white `(1, 1, 1, 1)` if not specified.
+    colors: [rerun.components.Color] (
+        "attr.rerun.component_recommended",
+        nullable,
+        order: 2200
+    );
 }

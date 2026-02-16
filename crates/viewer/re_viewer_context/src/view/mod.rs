@@ -99,6 +99,12 @@ impl From<re_renderer::renderer::LineDrawDataError> for ViewSystemExecutionError
     }
 }
 
+impl From<re_renderer::renderer::GaussianSplatDrawDataError> for ViewSystemExecutionError {
+    fn from(val: re_renderer::renderer::GaussianSplatDrawDataError) -> Self {
+        Self::DrawDataCreationError(Box::new(val))
+    }
+}
+
 impl From<re_renderer::renderer::PointCloudDrawDataError> for ViewSystemExecutionError {
     fn from(val: re_renderer::renderer::PointCloudDrawDataError) -> Self {
         Self::DrawDataCreationError(Box::new(val))

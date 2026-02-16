@@ -1,6 +1,7 @@
 mod compositor;
 mod debug_overlay;
 mod depth_cloud;
+mod gaussian_splat;
 mod generic_skybox;
 mod lines;
 mod mesh_renderer;
@@ -25,9 +26,15 @@ pub use world_grid::{WorldGridConfiguration, WorldGridDrawData, WorldGridRendere
 
 pub use self::depth_cloud::{DepthCloud, DepthCloudDrawData, DepthCloudRenderer, DepthClouds};
 
+pub use gaussian_splat::{
+    GaussianSplatBatchInfo, GaussianSplatDrawData,
+    GaussianSplatDrawDataError, GaussianSplatRenderer,
+};
+
 pub mod gpu_data {
     pub use super::lines::gpu_data::{LineStripInfo, LineVertex};
     pub use super::point_cloud::gpu_data::PositionRadius;
+    pub use super::gaussian_splat::gpu_data::{PositionOpacity, Scale, Rotation};
 }
 
 pub(crate) use compositor::CompositorDrawData;

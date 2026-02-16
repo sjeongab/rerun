@@ -50,6 +50,7 @@ mod error_handling;
 mod file_resolver;
 mod file_server;
 mod file_system;
+mod gaussian_splat_builder;
 mod global_bindings;
 mod line_drawable_builder;
 mod point_cloud_builder;
@@ -92,6 +93,7 @@ pub use draw_phases::{
 };
 // Re-export used color types directly.
 pub use ecolor::{Color32, Hsva, Rgba};
+pub use gaussian_splat_builder::{GaussianSplatBatchBuilder, GaussianSplatBuilder};
 pub use global_bindings::GlobalBindings;
 pub use importer::{CpuMeshInstance, CpuModel, CpuModelMeshKey};
 pub use line_drawable_builder::{LineBatchBuilder, LineDrawableBuilder, LineStripBuilder};

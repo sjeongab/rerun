@@ -18,7 +18,7 @@ from .depth_image import DepthImage
 from .ellipsoids3d import Ellipsoids3D
 from .encoded_depth_image import EncodedDepthImage
 from .encoded_image import EncodedImage
-from .gaussiansplats3d import GaussianSplats3D
+from .gaussian_splats3d import GaussianSplats3D
 from .geo_line_strings import GeoLineStrings
 from .geo_points import GeoPoints
 from .graph_edges import GraphEdges

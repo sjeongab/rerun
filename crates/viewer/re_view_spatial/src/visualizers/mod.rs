@@ -12,7 +12,7 @@ mod depth_images;
 mod ellipsoids;
 mod encoded_depth_image;
 mod encoded_image;
-mod gaussiansplats3d;
+mod gaussian_splats3d;
 mod images;
 mod lines2d;
 mod lines3d;
@@ -77,7 +77,6 @@ pub fn register_2d_spatial_visualizers(
     system_registry.register_visualizer::<ellipsoids::Ellipsoids3DVisualizer>()?;
     system_registry.register_visualizer::<encoded_depth_image::EncodedDepthImageVisualizer>()?;
     system_registry.register_visualizer::<encoded_image::EncodedImageVisualizer>()?;
-    system_registry.register_visualizer::<gaussiansplats3d::GaussianSplats3DVisualizer>()?;
     system_registry.register_visualizer::<images::ImageVisualizer>()?;
     system_registry.register_visualizer::<lines2d::Lines2DVisualizer>()?;
     system_registry.register_visualizer::<lines3d::Lines3DVisualizer>()?;
@@ -106,7 +105,7 @@ pub fn register_3d_spatial_visualizers(
     system_registry.register_visualizer::<ellipsoids::Ellipsoids3DVisualizer>()?;
     system_registry.register_visualizer::<encoded_depth_image::EncodedDepthImageVisualizer>()?;
     system_registry.register_visualizer::<encoded_image::EncodedImageVisualizer>()?;
-    system_registry.register_visualizer::<gaussiansplats3d::GaussianSplats3DVisualizer>()?;
+    system_registry.register_visualizer::<gaussian_splats3d::GaussianSplats3DVisualizer>()?;
     system_registry.register_visualizer::<images::ImageVisualizer>()?;
     system_registry.register_visualizer::<lines2d::Lines2DVisualizer>()?;
     system_registry.register_visualizer::<lines3d::Lines3DVisualizer>()?;
