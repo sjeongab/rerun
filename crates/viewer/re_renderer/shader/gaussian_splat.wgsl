@@ -274,7 +274,7 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 
     if alpha < 1.0 / 255.0 { discard; }
 
-    return vec4f(in.color.rgb, alpha);
+    return vec4f(in.color.rgb * alpha, alpha);
 
 }
 
