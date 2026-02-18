@@ -210,26 +210,36 @@ fn vs_main(@builtin(vertex_index) vertex_idx: u32) -> VertexOut {
 
     // ---- Project to 2D covariance: Σ_2d = T · Tᵀ  where T = J · M ----
     let T     = J * M;              // mat3x2f  (2×3 in math)
-    let cov2d = T * transpose(T);   // mat2x2f  (2×2 in math)
+    var cov2d = T * transpose(T);   // mat2x2f  (2×2 in math)
+    //cov2d[0][0] += 0.3;
+    //cov2d[1][1] += 0.3;
 
     // Anti-aliasing low-pass filter (add small isotropic variance).
     let a = cov2d[0].x + LOW_PASS_VARIANCE;
     let b = cov2d[0].y;                        // == cov2d[1].x (symmetric)
     let c = cov2d[1].y + LOW_PASS_VARIANCE;
 
+    // ---- Conic = inverse of 2D covariance (upper triangle) ----
+    // (det and conic computation unchanged)
     let det = a * c - b * b;
     if det <= 0.0 {
         out.position = vec4f(0.0, 0.0, 2.0, 1.0);
         return out;
     }
 
-    // ---- Conic = inverse of 2D covariance (upper triangle) ----
     let inv_det = 1.0 / det;
     let conic   = vec3f(c * inv_det, -b * inv_det, a * inv_det);
 
     // ---- Bounding quad radius from largest eigenvalue ----
+    // Use the numerically stable form from the standard 3DGS reference:
+    //   eigenvalues of [[a,b],[b,c]] = mid ± sqrt( ((a-c)/2)² + b² )
+    //
+    // The old form `sqrt(mid² - det)` is mathematically identical but
+    // suffers from catastrophic cancellation when a ≈ c, producing
+    // wildly wrong eigenvalues that manifest as spike artifacts.
     let mid        = 0.5 * (a + c);
-    let lambda_max = mid + sqrt(max(0.0001, mid * mid - det));
+    let half_diff  = 0.5 * (a - c);
+    let lambda_max = mid + length(vec2f(half_diff, b));
     let radius_px  = ceil(SIGMA_CUTOFF * sqrt(lambda_max));
 
     // ---- Span the screen-space quad ----

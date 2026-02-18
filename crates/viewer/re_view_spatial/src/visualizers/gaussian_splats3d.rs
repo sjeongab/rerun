@@ -1,6 +1,7 @@
 // crates/viewer/re_view_spatial/src/visualizers/gaussian_splats3d.rs
 
 use itertools::Itertools as _;
+use re_viewer_context::ViewStateExt as _;
 use re_renderer::{GaussianSplatBuilder, PickingLayerInstanceId};
 use re_sdk_types::archetypes::GaussianSplats3D;
 use re_sdk_types::components::{Color, HalfSize3D, Opacity, Position3D, RotationQuat};
@@ -9,6 +10,7 @@ use re_viewer_context::{
     IdentifiedViewSystem, QueryContext, ViewContext, ViewContextCollection, ViewQuery,
     ViewSystemExecutionError, VisualizerExecutionOutput, VisualizerQueryInfo, VisualizerSystem,
 };
+use crate::SpatialViewState;
 
 use super::SpatialViewVisualizerData;
 use crate::contexts::SpatialSceneVisualizerInstructionContext;
@@ -56,6 +58,7 @@ impl GaussianSplats3DVisualizer {
         query: &ViewQuery<'_>,
         ent_context: &SpatialSceneVisualizerInstructionContext<'_>,
         data: impl Iterator<Item = GaussianSplats3DComponentData<'a>>,
+        eye_position: glam::Vec3,
     ) -> Result<(), ViewSystemExecutionError> {
         let entity_path = ctx.target_entity_path;
 
@@ -111,13 +114,69 @@ impl GaussianSplats3DVisualizer {
             // handles per-splat opacity via the position_opacity data texture.
             let opacities: &[f32] = data.opacities;
 
-            // Submit for each transform instance (mirrors Points3D).
             for world_from_obj in ent_context
                 .transform_info
                 .target_from_instances()
                 .iter()
                 .map(|transform| transform.as_affine3a())
             {
+                // ---- Sort splats back-to-front relative to camera ----
+                let sorted_indices = {
+                    re_tracing::profile_scope!("depth_sort");
+
+                    let mut indices: Vec<usize> = (0..num_instances).collect();
+                    indices.sort_unstable_by(|&a, &b| {
+                        let pos_a = world_from_obj.transform_point3(positions[a]);
+                        let pos_b = world_from_obj.transform_point3(positions[b]);
+                        let dist_a = eye_position.distance_squared(pos_a);
+                        let dist_b = eye_position.distance_squared(pos_b);
+                        // Back-to-front: farthest first
+                        dist_b
+                            .partial_cmp(&dist_a)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                    indices
+                };
+
+                // Build sorted arrays
+                let sorted_positions: Vec<glam::Vec3> =
+                    sorted_indices.iter().map(|&i| positions[i]).collect();
+                let sorted_opacities: Vec<f32> = sorted_indices
+                    .iter()
+                    .map(|&i| {
+                        *opacities
+                            .get(i)
+                            .or(opacities.last())
+                            .unwrap_or(&1.0)
+                    })
+                    .collect();
+                let sorted_scales: Vec<glam::Vec3> = sorted_indices
+                    .iter()
+                    .map(|&i| {
+                        scales
+                            .get(i)
+                            .or(scales.last())
+                            .copied()
+                            .unwrap_or(glam::Vec3::splat(0.01))
+                    })
+                    .collect();
+                let sorted_rotations: Vec<glam::Quat> = sorted_indices
+                    .iter()
+                    .map(|&i| {
+                        rotations
+                            .get(i)
+                            .or(rotations.last())
+                            .copied()
+                            .unwrap_or(glam::Quat::IDENTITY)
+                    })
+                    .collect();
+                let sorted_colors: Vec<re_renderer::Color32> =
+                    sorted_indices.iter().map(|&i| colors[i]).collect();
+                let sorted_picking_ids: Vec<PickingLayerInstanceId> = sorted_indices
+                    .iter()
+                    .map(|&i| PickingLayerInstanceId(i as _))
+                    .collect();
+
                 let splat_batch = splat_builder
                     .batch(entity_path.to_string())
                     .world_from_obj(world_from_obj)
@@ -127,28 +186,34 @@ impl GaussianSplats3DVisualizer {
                     ));
 
                 let mut splat_range_builder = splat_batch.add_splats(
-                    positions,
-                    opacities,
-                    scales,
-                    rotations,
-                    &colors,
-                    &picking_ids,
+                    &sorted_positions,
+                    &sorted_opacities,
+                    &sorted_scales,
+                    &sorted_rotations,
+                    &sorted_colors,
+                    &sorted_picking_ids,
                 );
 
-                // Per-instance highlight outlines.
+                // Per-instance highlight outlines (indices unchanged — picking ids
+                // carry the original instance index).
                 for (highlighted_key, instance_mask_ids) in &ent_context.highlight.instances {
-                    let idx = highlighted_key.get();
-                    if idx < num_instances as u64 {
-                        splat_range_builder = splat_range_builder
-                            .push_additional_outline_mask_ids_for_range(
-                                idx as u32..idx as u32 + 1,
-                                *instance_mask_ids,
-                            );
+                    let original_idx = highlighted_key.get();
+                    if original_idx < num_instances as u64 {
+                        // Find where this original index ended up after sorting
+                        if let Some(sorted_pos) = sorted_indices
+                            .iter()
+                            .position(|&i| i == original_idx as usize)
+                        {
+                            splat_range_builder = splat_range_builder
+                                .push_additional_outline_mask_ids_for_range(
+                                    sorted_pos as u32..sorted_pos as u32 + 1,
+                                    *instance_mask_ids,
+                                );
+                        }
                     }
                 }
 
-                // Compute bounding box using scales for a conservative extent.
-                // Expand each position by its largest scale axis × SIGMA_CUTOFF.
+                // Bounding box (same as before)
                 {
                     let mut expanded_bbox = obj_space_bounding_box;
                     if !scales.is_empty() {
@@ -160,7 +225,6 @@ impl GaussianSplats3DVisualizer {
                             expanded_bbox.extend(pos + extent);
                         }
                     }
-
                     self.data.add_bounding_box(
                         entity_path.hash(),
                         expanded_bbox,
@@ -203,6 +267,13 @@ impl VisualizerSystem for GaussianSplats3DVisualizer {
             re_view::SIZE_BOOST_IN_POINTS_FOR_POINT_OUTLINES,
         );
 
+        let eye_position = ctx
+            .view_state
+            .downcast_ref::<SpatialViewState>()
+            .ok()
+            .and_then(|state| state.state_3d.eye_state.last_eye.as_ref())
+            .map(|eye| eye.pos_in_world())
+            .unwrap_or(glam::Vec3::ZERO);
         use super::entity_iterator::process_archetype;
         process_archetype::<Self, GaussianSplats3D, _>(
             ctx,
@@ -256,7 +327,7 @@ impl VisualizerSystem for GaussianSplats3DVisualizer {
                     },
                 );
 
-                self.process_data(ctx, &mut splat_builder, view_query, spatial_ctx, data)
+                self.process_data(ctx, &mut splat_builder, view_query, spatial_ctx, data, eye_position)
             },
         )?;
 

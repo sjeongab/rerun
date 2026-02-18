@@ -5,7 +5,7 @@ from pathlib import Path
 
 # --- CONFIGURATION ---
 script_dir = Path(__file__).parent.resolve()
-ply_file_path = script_dir / "point_cloud.ply"
+ply_file_path = script_dir / "ex_0.ply"
 # ---------------------
 
 SH_C0 = 0.28209479177387814
@@ -51,7 +51,7 @@ def load_splats():
 
     print("Logging to Rerun...")
 
-    mode = "splats"
+    mode = "ellipsoids"
     print(f"mode: {mode}")
 
     match mode.lower():
